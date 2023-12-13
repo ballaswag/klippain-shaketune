@@ -353,7 +353,7 @@ def plot_compare_frequency(ax, lognames, signal1, signal2, max_freq):
     ax.grid(which='minor', color='lightgrey')
     fontP = matplotlib.font_manager.FontProperties()
     fontP.set_size('small')
-    ax.set_title('Belts Frequency Profiles (estimated similarity: {:.1f}%)'.format(similarity_factor), fontsize=14, color=KLIPPAIN_COLORS['dark_orange'], weight='bold')
+    ax.set_title('Belts Frequency Profiles (estimated similarity: {:.1f}%)'.format(similarity_factor), fontsize=10, color=KLIPPAIN_COLORS['dark_orange'], weight='bold')
 
     # Print the table of offsets ontop of the graph below the original legend (upper right)
     if len(offsets_table_data) > 0:
@@ -369,7 +369,7 @@ def plot_compare_frequency(ax, lognames, signal1, signal2, max_freq):
             offset_table[cell].set_alpha(0.6)
 
     ax.legend(loc='upper left', prop=fontP)
-    ax2.legend(loc='upper right', prop=fontP)
+    ax2.legend(loc='center right', prop=fontP)
 
     return similarity_factor, unpaired_peak_count
 
@@ -473,7 +473,7 @@ def setup_klipper_import(kdir):
     shaper_calibrate = importlib.import_module('.shaper_calibrate', 'extras')
 
 
-def belts_calibration(lognames, klipperdir="~/klipper", max_freq=200.):
+def belts_calibration(lognames, klipperdir="~/klipper", max_freq=200., graph_spectogram=True, width=8.3, height=11.6):
     setup_klipper_import(klipperdir)
 
     # Parse data
@@ -491,14 +491,16 @@ def belts_calibration(lognames, klipperdir="~/klipper", max_freq=200.):
     signal1 = signal1._replace(paired_peaks=paired_peaks, unpaired_peaks=unpaired_peaks1)
     signal2 = signal2._replace(paired_peaks=paired_peaks, unpaired_peaks=unpaired_peaks2)
 
-    fig = matplotlib.pyplot.figure()
-    gs = matplotlib.gridspec.GridSpec(2, 1, height_ratios=[4, 3])
-    ax1 = fig.add_subplot(gs[0])
-    ax2 = fig.add_subplot(gs[1])
+
+    if graph_spectogram:
+        fig = matplotlib.pyplot.figure()
+        gs = matplotlib.gridspec.GridSpec(2, 1, height_ratios=[4, 3])
+        ax1 = fig.add_subplot(gs[0])
+        ax2 = fig.add_subplot(gs[1])
+    else:
+        fig, ax1 = matplotlib.pyplot.subplots()
 
     # Add title
-    title_line1 = "RELATIVE BELT CALIBRATION TOOL"
-    fig.text(0.12, 0.965, title_line1, ha='left', va='bottom', fontsize=20, color=KLIPPAIN_COLORS['purple'], weight='bold')
     try:
         filename = lognames[0].split('/')[-1]
         dt = datetime.strptime(f"{filename.split('_')[1]} {filename.split('_')[2]}", "%Y%m%d %H%M%S")
@@ -506,20 +508,16 @@ def belts_calibration(lognames, klipperdir="~/klipper", max_freq=200.):
     except:
         print("Warning: CSV filenames look to be different than expected (%s , %s)" % (lognames[0], lognames[1]))
         title_line2 = lognames[0].split('/')[-1] + " / " +  lognames[1].split('/')[-1]
-    fig.text(0.12, 0.957, title_line2, ha='left', va='top', fontsize=16, color=KLIPPAIN_COLORS['dark_purple'])
+    fig.suptitle(title_line2)
 
     # Plot the graphs
     similarity_factor, _ = plot_compare_frequency(ax1, lognames, signal1, signal2, max_freq)
-    plot_difference_spectrogram(ax2, datas[0], datas[1], signal1, signal2, similarity_factor, max_freq)
+    if graph_spectogram:
+        plot_difference_spectrogram(ax2, datas[0], datas[1], signal1, signal2, similarity_factor, max_freq)
 
-    fig.set_size_inches(8.3, 11.6)
+    fig.set_size_inches(width, height)
     fig.tight_layout()
     fig.subplots_adjust(top=0.89)
-    
-    # Adding a small Klippain logo to the top left corner of the figure
-    ax_logo = fig.add_axes([0.001, 0.899, 0.1, 0.1], anchor='NW', zorder=-1)
-    ax_logo.imshow(matplotlib.pyplot.imread(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'klippain.png')))
-    ax_logo.axis('off')
     
     return fig
 
@@ -534,13 +532,21 @@ def main():
                     help="maximum frequency to graph")
     opts.add_option("-k", "--klipper_dir", type="string", dest="klipperdir",
                     default="~/klipper", help="main klipper directory")
+    opts.add_option("-n", "--no_spectogram", action="store_false", dest="no_spectogram",
+                    default=True, help="disable plotting of spectogram")
+    opts.add_option("-w", "--width", type="float", dest="width",
+                    default=8.3, help="width (inches) of the graph(s)")
+    opts.add_option("-l", "--height", type="float", dest="height",
+                    default=11.6, help="height (inches) of the graph(s)")
+    
     options, args = opts.parse_args()
     if len(args) < 1:
         opts.error("Incorrect number of arguments")
     if options.output is None:
         opts.error("You must specify an output file.png to use the script (option -o)")
 
-    fig = belts_calibration(args, options.klipperdir, options.max_freq)
+    fig = belts_calibration(args, options.klipperdir, options.max_freq, options.no_spectogram,
+                            options.width, options.height)
     fig.savefig(options.output)
 
 
