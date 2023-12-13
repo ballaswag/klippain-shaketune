@@ -14,7 +14,6 @@
 import optparse, matplotlib, sys, importlib, os
 from collections import namedtuple
 import numpy as np
-import scipy
 import matplotlib.pyplot, matplotlib.dates, matplotlib.font_manager
 import matplotlib.ticker, matplotlib.gridspec, matplotlib.colors
 import matplotlib.patches
@@ -164,6 +163,8 @@ def pair_peaks(peaks1, freqs1, psd1, peaks2, freqs2, psd2):
 ######################################################################
 
 def compute_spectrogram(data):
+    import scipy
+
     N = data.shape[0]
     Fs = N / (data[-1, 0] - data[0, 0])
     # Round up to a power of 2 for faster FFT
@@ -190,6 +191,8 @@ def compute_spectrogram(data):
 # Interpolate source_data (2D) to match target_x and target_y in order to
 # get similar time and frequency dimensions for the differential spectrogram
 def interpolate_2d(target_x, target_y, source_x, source_y, source_data):
+    import scipy
+
     # Create a grid of points in the source and target space
     source_points = np.array([(x, y) for y in source_y for x in source_x])
     target_points = np.array([(x, y) for y in target_y for x in target_x])
